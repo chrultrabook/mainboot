@@ -18,6 +18,7 @@
 #include <dm/device_compat.h>
 #include <linux/arm-smccc.h>
 #include <linux/iopoll.h>
+#include <linux/printk.h>
 
 #define BSEC_OTP_MAX_VALUE		95
 #define BSEC_OTP_UPPER_START		32
@@ -622,7 +623,7 @@ static int stm32mp_bsec_read(struct udevice *dev, int offset,
 		shadow = false;
 	}
 
-	if ((offs % 4) || (size % 4))
+	if ((offs % 4) || (size % 4) || !size)
 		return -EINVAL;
 
 	if (IS_ENABLED(CONFIG_OPTEE) && priv->tee) {
@@ -678,7 +679,7 @@ static int stm32mp_bsec_write(struct udevice *dev, int offset,
 		shadow = false;
 	}
 
-	if ((offs % 4) || (size % 4))
+	if ((offs % 4) || (size % 4) || !size)
 		return -EINVAL;
 
 	if (IS_ENABLED(CONFIG_OPTEE) && priv->tee) {

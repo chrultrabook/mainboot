@@ -14,7 +14,7 @@
 #include <event.h>
 #include <spl.h>
 #include <asm/arch/rdc.h>
-#include <asm/mach-imx/s400_api.h>
+#include <asm/mach-imx/ele_api.h>
 #include <asm/mach-imx/mu_hal.h>
 #include <cpu_func.h>
 #include <asm/setup.h>
@@ -70,7 +70,7 @@ int mmc_get_env_dev(void)
 }
 #endif
 
-static void set_cpu_info(struct sentinel_get_info_data *info)
+static void set_cpu_info(struct ele_get_info_data *info)
 {
 	gd->arch.soc_rev = info->soc;
 	gd->arch.lifecycle = info->lc;
@@ -582,9 +582,9 @@ void get_board_serial(struct tag_serialnr *serialnr)
 	u32 res;
 	int ret;
 
-	ret = ahab_read_common_fuse(1, uid, 4, &res);
+	ret = ele_read_common_fuse(1, uid, 4, &res);
 	if (ret)
-		printf("ahab read fuse failed %d, 0x%x\n", ret, res);
+		printf("ele read fuse failed %d, 0x%x\n", ret, res);
 	else
 		printf("UID 0x%x,0x%x,0x%x,0x%x\n", uid[0], uid[1], uid[2], uid[3]);
 
@@ -783,7 +783,7 @@ int imx8ulp_dm_post_init(void)
 	struct udevice *devp;
 	int ret;
 	u32 res;
-	struct sentinel_get_info_data *info = (struct sentinel_get_info_data *)SRAM0_BASE;
+	struct ele_get_info_data *info = (struct ele_get_info_data *)SRAM0_BASE;
 
 	ret = uclass_get_device_by_driver(UCLASS_MISC, DM_DRIVER_GET(imx8ulp_mu), &devp);
 	if (ret) {
@@ -791,11 +791,11 @@ int imx8ulp_dm_post_init(void)
 		return ret;
 	}
 
-	ret = ahab_get_info(info, &res);
+	ret = ele_get_info(info, &res);
 	if (ret) {
-		printf("ahab_get_info failed %d\n", ret);
+		printf("ele_get_info failed %d\n", ret);
 		/* fallback to A0.1 revision */
-		memset((void *)info, 0, sizeof(struct sentinel_get_info_data));
+		memset((void *)info, 0, sizeof(struct ele_get_info_data));
 		info->soc = 0xa000084d;
 	}
 
@@ -803,12 +803,7 @@ int imx8ulp_dm_post_init(void)
 
 	return 0;
 }
-
-static int imx8ulp_evt_dm_post_init(void *ctx, struct event *event)
-{
-	return imx8ulp_dm_post_init();
-}
-EVENT_SPY(EVT_DM_POST_INIT_F, imx8ulp_evt_dm_post_init);
+EVENT_SPY_SIMPLE(EVT_DM_POST_INIT_F, imx8ulp_dm_post_init);
 
 #if defined(CONFIG_SPL_BUILD)
 __weak void __noreturn jump_to_image_no_args(struct spl_image_info *spl_image)

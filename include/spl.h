@@ -31,6 +31,7 @@ struct legacy_img_hdr;
 struct blk_desc;
 struct legacy_img_hdr;
 struct spl_boot_device;
+enum boot_device;
 
 /*
  * u_boot_first_phase() - check if this is the first U-Boot phase
@@ -129,6 +130,16 @@ static inline enum u_boot_phase spl_phase(void)
 	else
 		return PHASE_BOARD_R;
 #endif
+}
+
+/* returns true if in U-Boot proper, false if in SPL */
+static inline bool spl_in_proper(void)
+{
+#ifdef CONFIG_SPL_BUILD
+	return false;
+#endif
+
+	return true;
 }
 
 /**
@@ -261,6 +272,15 @@ struct spl_image_info {
 	ulong dcrc;
 #endif
 };
+
+static inline void *spl_image_fdt_addr(struct spl_image_info *info)
+{
+#if CONFIG_IS_ENABLED(LOAD_FIT) || CONFIG_IS_ENABLED(LOAD_FIT_FULL)
+	return info->fdt_addr;
+#else
+	return 0;
+#endif
+}
 
 /**
  * Information required to load data from a device
@@ -483,7 +503,7 @@ unsigned long spl_mmc_get_uboot_raw_sector(struct mmc *mmc,
  * spl_set_header_raw_uboot() - Set up a standard SPL image structure
  *
  * This sets up the given spl_image which the standard values obtained from
- * config options: CONFIG_SYS_MONITOR_LEN, CFG_SYS_UBOOT_START,
+ * config options: CONFIG_SYS_MONITOR_LEN, CONFIG_SYS_UBOOT_START,
  * CONFIG_TEXT_BASE.
  *
  * @spl_image: Image description to set up
@@ -525,7 +545,7 @@ void spl_board_prepare_for_linux(void);
 void spl_board_prepare_for_optee(void *fdt);
 void spl_board_prepare_for_boot(void);
 int spl_board_ubi_load_image(u32 boot_device);
-int spl_board_boot_device(u32 boot_device);
+int spl_board_boot_device(enum boot_device boot_dev_spl);
 
 /**
  * spl_board_loader_name() - Return a name for the loader
@@ -672,6 +692,9 @@ int spl_load_image_ext(struct spl_image_info *spl_image,
 int spl_load_image_ext_os(struct spl_image_info *spl_image,
 			  struct spl_boot_device *bootdev,
 			  struct blk_desc *block_dev, int partition);
+int spl_blk_load_image(struct spl_image_info *spl_image,
+		       struct spl_boot_device *bootdev,
+		       enum uclass_id uclass_id, int devnum, int partnum);
 
 /**
  * spl_early_init() - Set up device tree and driver model in SPL if enabled
@@ -703,9 +726,13 @@ int spl_early_init(void);
  */
 int spl_init(void);
 
-#ifdef CONFIG_SPL_BOARD_INIT
+/*
+ * spl_board_init() - Do board-specific init in SPL
+ *
+ * If xPL_BOARD_INIT is enabled, this is called from board_init_r() before
+ * jumping to the next phase.
+ */
 void spl_board_init(void);
-#endif
 
 /**
  * spl_was_boot_source() - check if U-Boot booted from SPL
@@ -766,7 +793,7 @@ int spl_ymodem_load_image(struct spl_image_info *spl_image,
 /**
  * spl_invoke_atf - boot using an ARM trusted firmware image
  */
-void spl_invoke_atf(struct spl_image_info *spl_image);
+void __noreturn spl_invoke_atf(struct spl_image_info *spl_image);
 
 /**
  * bl2_plat_get_bl31_params() - return params for bl31.
@@ -858,7 +885,7 @@ void __noreturn spl_optee_entry(void *arg0, void *arg1, void *arg2, void *arg3);
 /**
  * spl_invoke_opensbi - boot using a RISC-V OpenSBI image
  */
-void spl_invoke_opensbi(struct spl_image_info *spl_image);
+void __noreturn spl_invoke_opensbi(struct spl_image_info *spl_image);
 
 /**
  * board_return_to_bootrom - allow for boards to continue with the boot ROM
@@ -893,4 +920,24 @@ struct legacy_img_hdr *spl_get_load_buffer(ssize_t offset, size_t size);
 
 void board_boot_order(u32 *spl_boot_list);
 void spl_save_restore_data(void);
+
+/**
+ * spl_load_fit_image() - Fully parse and a FIT image in SPL
+ *
+ * @spl_image: SPL Image data to fill in
+ * @header: Pointer to FIT image
+ * Return 0 if OK, -ve on error
+ */
+int spl_load_fit_image(struct spl_image_info *spl_image,
+		       const struct legacy_img_hdr *header);
+
+/*
+ * spl_decompression_enabled() - check decompression support is enabled for SPL build
+ *
+ * Returns  true  if decompression support is enabled, else False
+ */
+static inline bool spl_decompression_enabled(void)
+{
+	return IS_ENABLED(CONFIG_SPL_GZIP) || IS_ENABLED(CONFIG_SPL_LZMA);
+}
 #endif

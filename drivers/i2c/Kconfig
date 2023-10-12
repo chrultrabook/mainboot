@@ -231,6 +231,15 @@ config SYS_I2C_DW
 	  controller is used in various SoCs, e.g. the ST SPEAr, Altera
 	  SoCFPGA, Synopsys ARC700 and some Intel x86 SoCs.
 
+config SYS_I2C_DW_PCI
+	bool "Designware PCI I2C Controller"
+	depends on SYS_I2C_DW && PCI && ACPIGEN
+	default y
+	help
+	  Say yes here to select the Designware PCI I2C Host Controller.
+	  This PCI I2C controller is the base on Desigware I2C host
+	  controller.
+
 config SYS_I2C_AST2600
     bool "AST2600 I2C Controller"
     depends on DM_I2C && ARCH_ASPEED
@@ -363,7 +372,7 @@ config SYS_MXC_I2C1_SPEED
 
 config SYS_MXC_I2C1_SLAVE
 	hex "I2C1 Slave"
-	default 0
+	default 0x0
 	help
 	 MXC I2C1 Slave
 endif
@@ -378,7 +387,7 @@ config SYS_MXC_I2C2_SPEED
 
 config SYS_MXC_I2C2_SLAVE
 	hex "I2C2 Slave"
-	default 0
+	default 0x0
 	help
 	 MXC I2C2 Slave
 endif
@@ -392,7 +401,7 @@ config SYS_MXC_I2C3_SPEED
 
 config SYS_MXC_I2C3_SLAVE
 	hex "I2C3 Slave"
-	default 0
+	default 0x0
 	help
 	 MXC I2C3 Slave
 endif
@@ -406,7 +415,7 @@ config SYS_MXC_I2C4_SPEED
 
 config SYS_MXC_I2C4_SLAVE
 	hex "I2C4 Slave"
-	default 0
+	default 0x0
 	help
 	 MXC I2C4 Slave
 endif
@@ -420,7 +429,7 @@ config SYS_MXC_I2C5_SPEED
 
 config SYS_MXC_I2C5_SLAVE
 	hex "I2C5 Slave"
-	default 0
+	default 0x0
 	help
 	 MXC I2C5 Slave
 endif
@@ -434,7 +443,7 @@ config SYS_MXC_I2C6_SPEED
 
 config SYS_MXC_I2C6_SLAVE
 	hex "I2C6 Slave"
-	default 0
+	default 0x0
 	help
 	 MXC I2C6 Slave
 endif
@@ -448,7 +457,7 @@ config SYS_MXC_I2C7_SPEED
 
 config SYS_MXC_I2C7_SLAVE
 	hex "I2C7 Slave"
-	default 0
+	default 0x0
 	help
 	 MXC I2C7 Slave
 endif
@@ -462,7 +471,7 @@ config SYS_MXC_I2C8_SPEED
 
 config SYS_MXC_I2C8_SLAVE
 	hex "I2C8 Slave"
-	default 0
+	default 0x0
 	help
 	 MXC I2C8 Slave
 endif
@@ -744,7 +753,6 @@ config SYS_I2C_SPEED
 config SYS_I2C_BUS_MAX
 	int "Max I2C busses"
 	depends on ARCH_OMAP2PLUS || ARCH_SOCFPGA
-	default 2 if TI816X
 	default 3 if OMAP34XX || AM33XX || AM43XX
 	default 4 if ARCH_SOCFPGA || OMAP44XX
 	default 5 if OMAP54XX

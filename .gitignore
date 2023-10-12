@@ -35,7 +35,7 @@
 *.tab.[ch]
 
 # Build tree
-/build-*
+/build*
 
 #
 # Top-level generic files
@@ -53,6 +53,7 @@ fit-dtb.blob*
 #
 !.gitignore
 !.mailmap
+!.get_maintainer.*
 
 #
 # Generated files
@@ -106,5 +107,8 @@ __pycache__
 /pylint.cur
 /pylint.out/
 
-# moveconfig database
-/moveconfig.db
+# qconfig database
+/qconfig.db
+
+# Clang's compilation database file
+/compile_commands.json

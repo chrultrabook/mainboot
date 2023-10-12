@@ -135,6 +135,14 @@ config CMD_BDI
 	help
 	  Print board info
 
+config CMD_BDINFO_EXTRA
+	bool "bdinfo extra features"
+	default y if SANDBOX || X86
+	help
+	  Show additional information about the board. This uses a little more
+	  code space but provides more options, particularly those useful for
+	  bringup, development and debugging.
+
 config CMD_CONFIG
 	bool "config"
 	default SANDBOX
@@ -167,6 +175,13 @@ config CMD_FWU_METADATA
 	depends on FWU_MULTI_BANK_UPDATE
 	help
 	  Command to read the metadata and dump it's contents
+
+config CMD_HISTORY
+	bool "history"
+	depends on CMDLINE_EDITING
+	help
+	  Show the command-line history, i.e. a list of commands that are in
+	  the history buffer.
 
 config CMD_LICENSE
 	bool "license"
@@ -428,6 +443,15 @@ config CMD_ABOOTIMG
 
 	  See doc/android/boot-image.rst for details.
 
+config CMD_CEDIT
+	bool "cedit - Configuration editor"
+	depends on CEDIT
+	default y
+	help
+	  Provides a command to allow editing of board configuration and
+	  providing a UI for the user to adjust settings. Subcommands allow
+	  loading and saving of configuration as well as showing an editor.
+
 config CMD_ELF
 	bool "bootelf, bootvx"
 	default y
@@ -483,11 +507,6 @@ config CMD_XIMG
 	help
 	  Extract a part of a multi-image.
 
-config CMD_XXD
-	bool "xxd"
-	help
-	  Print file as hexdump to standard output
-
 config CMD_SPL
 	bool "spl export - Export boot information for Falcon boot"
 	depends on SPL
@@ -500,7 +519,7 @@ config CMD_SPL
 config CMD_SPL_NAND_OFS
 	hex "Offset of OS args or dtb for Falcon-mode NAND boot"
 	depends on CMD_SPL && (TPL_NAND_SUPPORT || SPL_NAND_SUPPORT)
-	default 0
+	default 0x0
 	help
 	  This provides the offset of the command line arguments for Linux
 	  when booting from NAND in Falcon mode.  See doc/README.falcon
@@ -510,7 +529,7 @@ config CMD_SPL_NAND_OFS
 config CMD_SPL_NOR_OFS
 	hex "Offset of OS args or dtb for Falcon-mode NOR boot"
 	depends on CMD_SPL && SPL_NOR_SUPPORT
-	default 0
+	default 0x0
 	help
 	  This provides the offset of the command line arguments or dtb for
 	  Linux when booting from NOR in Falcon mode.
@@ -527,6 +546,8 @@ config CMD_SPL_WRITE_SIZE
 config CMD_THOR_DOWNLOAD
 	bool "thor - TIZEN 'thor' download"
 	select DFU
+	select USB_FUNCTION_THOR
+	depends on USB_GADGET_DOWNLOAD
 	help
 	  Implements the 'thor' download protocol. This is a way of
 	  downloading a software update over USB from an attached host.
@@ -935,6 +956,16 @@ endmenu
 
 menu "Device access commands"
 
+config CMD_ARMFFA
+	bool "Arm FF-A test command"
+	depends on ARM_FFA_TRANSPORT
+	help
+	  Provides a test command for the FF-A support
+	  supported options:
+		- Listing the partition(s) info
+		- Sending a data pattern to the specified partition
+		- Displaying the arm_ffa device info
+
 config CMD_ARMFLASH
 	#depends on FLASH_CFI_DRIVER
 	bool "armflash"
@@ -969,6 +1000,7 @@ config CMD_BCB
 config CMD_BIND
 	bool "bind/unbind - Bind or unbind a device to/from a driver"
 	depends on DM
+	default y if USB_ETHER
 	help
 	  Bind or unbind a device to/from a driver from the command line.
 	  This is useful in situations where a device may be handled by several
@@ -1228,6 +1260,7 @@ config LOADS_ECHO
 
 config CMD_SAVES
 	bool "saves - Save a file over serial in S-Record format"
+	depends on CMD_LOADS
 	help
 	  Provides a way to save a binary file using the Motorola S-Record
 	  format over the serial line.
@@ -1495,7 +1528,7 @@ config DEFAULT_SPI_BUS
 config DEFAULT_SPI_MODE
 	hex "default spi mode used by sspi command (see include/spi.h)"
 	depends on CMD_SPI
-	default 0
+	default 0x0
 
 config CMD_TEMPERATURE
 	bool "temperature - display the temperature from thermal sensors"
@@ -1636,6 +1669,11 @@ config CMD_SETEXPR_FMT
 	help
 	  Evaluate format string expression and store result in an environment
 	    variable.
+
+config CMD_XXD
+	bool "xxd"
+	help
+	  Print file as hexdump to standard output
 
 endmenu
 
@@ -1786,7 +1824,7 @@ config BOOTP_PXE_CLIENTARCH
 	depends on BOOTP_PXE
 	default 0x16 if ARM64
 	default 0x15 if ARM
-	default 0 if X86
+	default 0x0 if X86
 
 config BOOTP_VCI_STRING
 	string
@@ -1849,7 +1887,6 @@ config CMD_RARP
 
 config CMD_NFS
 	bool "nfs"
-	default y
 	help
 	  Boot image via network using NFS protocol.
 
@@ -1988,6 +2025,7 @@ config CMD_2048
 config CMD_BMP
 	bool "Enable 'bmp' command"
 	depends on VIDEO
+	select BMP
 	help
 	  This provides a way to obtain information about a BMP-format image
 	  and to display it. BMP (which presumably stands for BitMaP) is a

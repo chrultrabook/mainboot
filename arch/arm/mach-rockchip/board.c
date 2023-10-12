@@ -41,7 +41,7 @@ static bool updatable_image(struct disk_partition *info)
 	uuid_str_to_bin(info->type_guid, image_type_guid.b,
 			UUID_STR_FORMAT_GUID);
 
-	for (i = 0; i < num_image_type_guids; i++) {
+	for (i = 0; i < update_info.num_images; i++) {
 		if (!guidcmp(&fw_images[i].image_type_id, &image_type_guid)) {
 			ret = true;
 			break;
@@ -59,7 +59,7 @@ static void set_image_index(struct disk_partition *info, int index)
 	uuid_str_to_bin(info->type_guid, image_type_guid.b,
 			UUID_STR_FORMAT_GUID);
 
-	for (i = 0; i < num_image_type_guids; i++) {
+	for (i = 0; i < update_info.num_images; i++) {
 		if (!guidcmp(&fw_images[i].image_type_id, &image_type_guid)) {
 			fw_images[i].image_index = index;
 			break;
@@ -299,9 +299,9 @@ static struct dwc3_device dwc3_device_data = {
 	.hsphy_mode = USBPHY_INTERFACE_MODE_UTMIW,
 };
 
-int usb_gadget_handle_interrupts(int index)
+int dm_usb_gadget_handle_interrupts(struct udevice *dev)
 {
-	dwc3_uboot_handle_interrupt(0);
+	dwc3_uboot_handle_interrupt(dev);
 	return 0;
 }
 

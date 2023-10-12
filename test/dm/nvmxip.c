@@ -17,7 +17,7 @@
 #include <linux/bitops.h>
 #include <test/test.h>
 #include <test/ut.h>
-#include "../../drivers/mtd/nvmxip/nvmxip.h"
+#include <nvmxip.h>
 
 /* NVMXIP devices described in the device tree */
 #define SANDBOX_NVMXIP_DEVICES 2
@@ -102,6 +102,8 @@ static int dm_test_nvmxip(struct unit_test_state *uts)
 	u8 device_idx;
 	void *buffer = NULL;
 	unsigned long flashsz;
+
+	sandbox_set_enable_memio(true);
 
 	/* set the flash content first for both devices */
 	dm_nvmxip_flash_sanity(uts, 0, NULL);

@@ -11,6 +11,13 @@
 	#size-cells = <1>;
 	compatible = "xlnx,zynq-7000";
 
+	options {
+		u-boot {
+			compatible = "u-boot,config";
+			bootscr-address = /bits/ 64 <0x3000000>;
+		};
+	};
+
 	cpus {
 		#address-cells = <1>;
 		#size-cells = <0>;
@@ -153,6 +160,7 @@
 			clocks = <&clkc 38>;
 			interrupt-parent = <&intc>;
 			interrupts = <0 25 4>;
+			clock-frequency = <400000>;
 			reg = <0xe0004000 0x1000>;
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -164,6 +172,7 @@
 			clocks = <&clkc 39>;
 			interrupt-parent = <&intc>;
 			interrupts = <0 48 4>;
+			clock-frequency = <400000>;
 			reg = <0xe0005000 0x1000>;
 			#address-cells = <1>;
 			#size-cells = <0>;

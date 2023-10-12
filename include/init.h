@@ -58,17 +58,6 @@ int arch_cpu_init(void);
 int mach_cpu_init(void);
 
 /**
- * arch_fsp_init() - perform firmware support package init
- *
- * Where U-Boot relies on binary blobs to handle part of the system init, this
- * function can be used to set up the blobs. This is used on some Intel
- * platforms.
- *
- * Return: 0
- */
-int arch_fsp_init(void);
-
-/**
  * arch_fsp_init() - perform post-relocation firmware support package init
  *
  * Where U-Boot relies on binary blobs to handle part of the system init, this
@@ -281,30 +270,31 @@ void board_init_r(struct global_data *id, ulong dest_addr)
 	__attribute__ ((noreturn));
 
 int cpu_init_r(void);
-int last_stage_init(void);
 int mac_read_from_eeprom(void);
 int set_cpu_clk_info(void);
 int update_flash_size(int flash_size);
 int arch_early_init_r(void);
 int misc_init_r(void);
-#if defined(CONFIG_VID)
-int init_func_vid(void);
-#endif
 
 /* common/board_info.c */
 int checkboard(void);
 int show_board_info(void);
 
 /**
- * Get the uppermost pointer that is valid to access
+ * board_get_usable_ram_top() - get uppermost address for U-Boot relocation
  *
- * Some systems may not map all of their address space. This function allows
- * boards to indicate what their highest support pointer value is for DRAM
- * access.
+ * Some systems have reserved memory areas in high memory. By implementing this
+ * function boards can indicate the highest address value to be used when
+ * relocating U-Boot. The returned address is exclusive (i.e. 1 byte above the
+ * last usable address).
  *
- * @param total_size	Size of U-Boot (unused?)
+ * Due to overflow on systems with 32bit phys_addr_t a value 0 is used instead
+ * of 4GiB.
+ *
+ * @total_size:	monitor length in bytes (size of U-Boot code)
+ * Return:	uppermost address for U-Boot relocation
  */
-phys_size_t board_get_usable_ram_top(phys_size_t total_size);
+phys_addr_t board_get_usable_ram_top(phys_size_t total_size);
 
 int board_early_init_f(void);
 

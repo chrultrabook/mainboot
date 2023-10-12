@@ -32,6 +32,7 @@
 #include <asm/mach-imx/iomux-v3.h>
 #include <asm/mach-imx/sata.h>
 #include <asm/mach-imx/video.h>
+#include <asm/sections.h>
 #include <mmc.h>
 #include <fsl_esdhc_imx.h>
 #include <malloc.h>
@@ -275,9 +276,8 @@ int board_early_init_f(void)
 {
 	setup_iomux_uart();
 
-#ifdef CONFIG_SATA
-	setup_sata();
-#endif
+	if (CONFIG_IS_ENABLED(SATA))
+		setup_sata();
 	setup_fec();
 
 	return 0;

@@ -301,7 +301,13 @@ struct global_data {
 	 * @timebase_l: low 32 bits of timer
 	 */
 	unsigned int timebase_l;
-#if CONFIG_VAL(SYS_MALLOC_F_LEN)
+	/**
+	 * @malloc_start: start of malloc() region
+	 */
+#if CONFIG_IS_ENABLED(CMD_BDINFO_EXTRA)
+	unsigned long malloc_start;
+#endif
+#if CONFIG_IS_ENABLED(SYS_MALLOC_F)
 	/**
 	 * @malloc_base: base address of early malloc()
 	 */
@@ -546,6 +552,14 @@ static_assert(sizeof(struct global_data) == GD_SIZE);
 #define gd_set_acpi_start(addr)
 #endif
 
+#ifdef CONFIG_SMBIOS
+#define gd_smbios_start()	gd->smbios_start
+#define gd_set_smbios_start(addr)	gd->arch.smbios_start = addr
+#else
+#define gd_smbios_start()	0UL
+#define gd_set_smbios_start(addr)
+#endif
+
 #if CONFIG_IS_ENABLED(MULTI_DTB_FIT)
 #define gd_multi_dtb_fit()	gd->multi_dtb_fit
 #define gd_set_multi_dtb_fit(_dtb)	gd->multi_dtb_fit = _dtb
@@ -558,6 +572,26 @@ static_assert(sizeof(struct global_data) == GD_SIZE);
 #define gd_event_state()	((struct event_state *)&gd->event_state)
 #else
 #define gd_event_state()	NULL
+#endif
+
+#if CONFIG_IS_ENABLED(CMD_BDINFO_EXTRA)
+#define gd_malloc_start()		gd->malloc_start
+#define gd_set_malloc_start(_val)	gd->malloc_start = (_val)
+#else
+#define gd_malloc_start()	0
+#define gd_set_malloc_start(val)
+#endif
+
+#if CONFIG_IS_ENABLED(PCI)
+#define gd_set_pci_ram_top(val)	gd->pci_ram_top = val
+#else
+#define gd_set_pci_ram_top(val)
+#endif
+
+#if CONFIG_VAL(SYS_MALLOC_F_LEN)
+#define gd_malloc_ptr()		gd->malloc_ptr
+#else
+#define gd_malloc_ptr()		0L
 #endif
 
 /**
@@ -654,6 +688,15 @@ enum gd_flags {
 	 * @GD_FLG_OF_TAG_MIGRATE: Device tree has old u-boot,dm- tags
 	 */
 	GD_FLG_OF_TAG_MIGRATE = 0x200000,
+	/**
+	 * @GD_FLG_DM_DEAD: Driver model is not accessible. This can be set when
+	 * the memory used to holds its tables has been mapped out.
+	 */
+	GD_FLG_DM_DEAD = 0x400000,
+	/**
+	 * @GD_FLG_BLOBLIST_READY: bloblist is ready for use
+	 */
+	GD_FLG_BLOBLIST_READY = 0x800000,
 };
 
 #endif /* __ASSEMBLY__ */

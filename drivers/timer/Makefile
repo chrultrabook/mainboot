@@ -4,7 +4,7 @@
 
 obj-y += timer-uclass.o
 obj-$(CONFIG_ALTERA_TIMER)	+= altera_timer.o
-obj-$(CONFIG_ANDES_PLMT_TIMER) += andes_plmt_timer.o
+obj-$(CONFIG_$(SPL_)ANDES_PLMT_TIMER) += andes_plmt_timer.o
 obj-$(CONFIG_ARC_TIMER)	+= arc_timer.o
 obj-$(CONFIG_ARM_TWD_TIMER)	+= arm_twd_timer.o
 obj-$(CONFIG_AST_TIMER)	+= ast_timer.o
@@ -25,7 +25,7 @@ obj-$(CONFIG_RISCV_TIMER) += riscv_timer.o
 obj-$(CONFIG_ROCKCHIP_TIMER) += rockchip_timer.o
 obj-$(CONFIG_SANDBOX_TIMER)	+= sandbox_timer.o
 obj-$(CONFIG_SP804_TIMER)	+= sp804_timer.o
-obj-$(CONFIG_$(SPL_)SIFIVE_CLINT) += sifive_clint_timer.o
+obj-$(CONFIG_$(SPL_)RISCV_ACLINT) += riscv_aclint_timer.o
 obj-$(CONFIG_ARM_GLOBAL_TIMER)	+= arm_global_timer.o
 obj-$(CONFIG_STM32_TIMER)	+= stm32_timer.o
 obj-$(CONFIG_TEGRA_TIMER)	+= tegra-timer.o
@@ -34,3 +34,4 @@ obj-$(CONFIG_MTK_TIMER)		+= mtk_timer.o
 obj-$(CONFIG_MCHP_PIT64B_TIMER)	+= mchp-pit64b-timer.o
 obj-$(CONFIG_IMX_GPT_TIMER)	+= imx-gpt-timer.o
 obj-$(CONFIG_XILINX_TIMER)	+= xilinx-timer.o
+obj-$(CONFIG_STARFIVE_TIMER)	+= starfive-timer.o

@@ -8,6 +8,7 @@
 #include <dfu.h>
 #include <image.h>
 #include <asm/arch/stm32prog.h>
+#include <linux/printk.h>
 #include "stm32prog.h"
 
 struct stm32prog_data *stm32prog_data;
@@ -180,15 +181,6 @@ U_BOOT_CMD(stm32prog, 5, 0, do_stm32prog,
 	   "  <size> = size of flashlayout (optional for image with STM32 header)\n"
 );
 
-#ifdef CONFIG_STM32MP15x_STM32IMAGE
-bool stm32prog_get_tee_partitions(void)
-{
-	if (stm32prog_data)
-		return stm32prog_data->tee_detected;
-
-	return false;
-}
-#endif
 
 bool stm32prog_get_fsbl_nor(void)
 {

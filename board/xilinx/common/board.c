@@ -52,10 +52,10 @@ struct efi_fw_image fw_images[] = {
 };
 
 struct efi_capsule_update_info update_info = {
+	.num_images = ARRAY_SIZE(fw_images),
 	.images = fw_images,
 };
 
-u8 num_image_type_guids = ARRAY_SIZE(fw_images);
 #endif /* EFI_HAVE_CAPSULE_SUPPORT */
 
 #define EEPROM_HEADER_MAGIC		0xdaaddeed
@@ -374,12 +374,12 @@ void *board_fdt_blob_setup(int *err)
 		 * region
 		 */
 		if (IS_ENABLED(CONFIG_SPL_SEPARATE_BSS))
-			fdt_blob = (ulong *)&_image_binary_end;
+			fdt_blob = (ulong *)_image_binary_end;
 		else
-			fdt_blob = (ulong *)&__bss_end;
+			fdt_blob = (ulong *)__bss_end;
 	} else {
 		/* FDT is at end of image */
-		fdt_blob = (ulong *)&_end;
+		fdt_blob = (ulong *)_end;
 	}
 
 	if (fdt_magic(fdt_blob) == FDT_MAGIC)
@@ -411,18 +411,43 @@ int board_late_init_xilinx(void)
 	int i, id, macid = 0;
 	struct xilinx_board_description *desc;
 	phys_size_t bootm_size = gd->ram_top - gd->ram_base;
+	u64 bootscr_flash_offset, bootscr_flash_size;
 
 	if (!IS_ENABLED(CONFIG_MICROBLAZE)) {
 		ulong scriptaddr;
+		u64 bootscr_address;
+		u64 bootscr_offset;
 
-		scriptaddr = env_get_hex("scriptaddr", 0);
-		ret |= env_set_hex("scriptaddr", gd->ram_base + scriptaddr);
+		/* Fetch bootscr_address/bootscr_offset from DT and update */
+		if (!ofnode_read_bootscript_address(&bootscr_address,
+						    &bootscr_offset)) {
+			if (bootscr_offset)
+				ret |= env_set_hex("scriptaddr",
+						   gd->ram_base +
+						   bootscr_offset);
+			else
+				ret |= env_set_hex("scriptaddr",
+						   bootscr_address);
+		} else {
+			/* Update scriptaddr(bootscr offset) from env */
+			scriptaddr = env_get_hex("scriptaddr", 0);
+			ret |= env_set_hex("scriptaddr",
+					   gd->ram_base + scriptaddr);
+		}
+	}
+
+	if (!ofnode_read_bootscript_flash(&bootscr_flash_offset,
+					  &bootscr_flash_size)) {
+		ret |= env_set_hex("script_offset_f", bootscr_flash_offset);
+		ret |= env_set_hex("script_size_f", bootscr_flash_size);
+	} else {
+		debug("!!! Please define bootscr-flash-offset via DT !!!\n");
+		ret |= env_set_hex("script_offset_f",
+				   CONFIG_BOOT_SCRIPT_OFFSET);
 	}
 
 	if (IS_ENABLED(CONFIG_ARCH_ZYNQ) || IS_ENABLED(CONFIG_MICROBLAZE))
 		bootm_size = min(bootm_size, (phys_size_t)(SZ_512M + SZ_256M));
-
-	ret |= env_set_hex("script_offset_f", CONFIG_BOOT_SCRIPT_OFFSET);
 
 	ret |= env_set_addr("bootm_low", (void *)gd->ram_base);
 	ret |= env_set_addr("bootm_size", (void *)bootm_size);
@@ -627,7 +652,7 @@ int embedded_dtb_select(void)
 #endif
 
 #if defined(CONFIG_LMB)
-phys_size_t board_get_usable_ram_top(phys_size_t total_size)
+phys_addr_t board_get_usable_ram_top(phys_size_t total_size)
 {
 	phys_size_t size;
 	phys_addr_t reg;

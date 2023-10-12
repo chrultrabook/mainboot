@@ -124,8 +124,8 @@ static int display_text_info(void)
 #if !defined(CONFIG_SANDBOX) && !defined(CONFIG_EFI_APP)
 	ulong bss_start, bss_end, text_base;
 
-	bss_start = (ulong)&__bss_start;
-	bss_end = (ulong)&__bss_end;
+	bss_start = (ulong)__bss_start;
+	bss_end = (ulong)__bss_end;
 
 #ifdef CONFIG_TEXT_BASE
 	text_base = CONFIG_TEXT_BASE;
@@ -148,11 +148,12 @@ static int print_resetinfo(void)
 	bool status_printed = false;
 	int ret;
 
-	/* Not all boards have sysreset drivers available during early
+	/*
+	 * Not all boards have sysreset drivers available during early
 	 * boot, so don't fail if one can't be found.
 	 */
 	for (ret = uclass_first_device_check(UCLASS_SYSRESET, &dev); dev;
-			ret = uclass_next_device_check(&dev)) {
+	     ret = uclass_next_device_check(&dev)) {
 		if (ret) {
 			debug("%s: %s sysreset device (error: %d)\n",
 			      __func__, dev->name, ret);
@@ -279,31 +280,24 @@ static int init_func_i2c(void)
 }
 #endif
 
-#if defined(CONFIG_VID)
-__weak int init_func_vid(void)
-{
-	return 0;
-}
-#endif
-
 static int setup_mon_len(void)
 {
 #if defined(__ARM__) || defined(__MICROBLAZE__)
-	gd->mon_len = (ulong)&__bss_end - (ulong)_start;
+	gd->mon_len = (ulong)__bss_end - (ulong)_start;
 #elif defined(CONFIG_SANDBOX) && !defined(__riscv)
-	gd->mon_len = (ulong)&_end - (ulong)_init;
+	gd->mon_len = (ulong)_end - (ulong)_init;
 #elif defined(CONFIG_SANDBOX)
 	/* gcc does not provide _init in crti.o on RISC-V */
 	gd->mon_len = 0;
 #elif defined(CONFIG_EFI_APP)
-	gd->mon_len = (ulong)&_end - (ulong)_init;
+	gd->mon_len = (ulong)_end - (ulong)_init;
 #elif defined(CONFIG_NIOS2) || defined(CONFIG_XTENSA)
 	gd->mon_len = CONFIG_SYS_MONITOR_LEN;
 #elif defined(CONFIG_SH) || defined(CONFIG_RISCV)
-	gd->mon_len = (ulong)(&__bss_end) - (ulong)(&_start);
+	gd->mon_len = (ulong)(__bss_end) - (ulong)(_start);
 #elif defined(CONFIG_SYS_MONITOR_BASE)
-	/* TODO: use (ulong)&__bss_end - (ulong)&__text_start; ? */
-	gd->mon_len = (ulong)&__bss_end - CONFIG_SYS_MONITOR_BASE;
+	/* TODO: use (ulong)__bss_end - (ulong)__text_start; ? */
+	gd->mon_len = (ulong)__bss_end - CONFIG_SYS_MONITOR_BASE;
 #endif
 	return 0;
 }
@@ -330,7 +324,7 @@ __weak int mach_cpu_init(void)
 }
 
 /* Get the top of usable RAM */
-__weak phys_size_t board_get_usable_ram_top(phys_size_t total_size)
+__weak phys_addr_t board_get_usable_ram_top(phys_size_t total_size)
 {
 #if defined(CFG_SYS_SDRAM_BASE) && CFG_SYS_SDRAM_BASE > 0
 	/*
@@ -411,7 +405,15 @@ __weak int arch_reserve_mmu(void)
 
 static int reserve_video(void)
 {
-	if (IS_ENABLED(CONFIG_VIDEO)) {
+	if (IS_ENABLED(CONFIG_SPL_VIDEO_HANDOFF) && spl_phase() > PHASE_SPL) {
+		struct video_handoff *ho;
+
+		ho = bloblist_find(BLOBLISTT_U_BOOT_VIDEO, sizeof(*ho));
+		if (!ho)
+			return log_msg_ret("blf", -ENOENT);
+		video_reserve_from_bloblist(ho);
+		gd->relocaddr = ho->fb;
+	} else if (CONFIG_IS_ENABLED(VIDEO)) {
 		ulong addr;
 		int ret;
 
@@ -633,8 +635,6 @@ static int init_post(void)
 static int reloc_fdt(void)
 {
 	if (!IS_ENABLED(CONFIG_OF_EMBED)) {
-		if (gd->flags & GD_FLG_SKIP_RELOC)
-			return 0;
 		if (gd->new_fdt) {
 			memcpy(gd->new_fdt, gd->fdt_blob,
 			       fdt_totalsize(gd->fdt_blob));
@@ -731,8 +731,7 @@ static int fix_fdt(void)
 #endif
 
 /* ARM calls relocate_code from its crt0.S */
-#if !defined(CONFIG_ARM) && !defined(CONFIG_SANDBOX) && \
-		!CONFIG_IS_ENABLED(X86_64)
+#if !defined(CONFIG_ARM) && !defined(CONFIG_SANDBOX)
 
 static int jump_to_copy(void)
 {
@@ -754,7 +753,11 @@ static int jump_to_copy(void)
 	 * (CPU cache)
 	 */
 	arch_setup_gd(gd->new_gd);
-	board_init_f_r_trampoline(gd->start_addr_sp);
+# if CONFIG_IS_ENABLED(X86_64)
+		board_init_f_r_trampoline64(gd->new_gd, gd->start_addr_sp);
+# else
+		board_init_f_r_trampoline(gd->start_addr_sp);
+# endif
 #else
 	relocate_code(gd->start_addr_sp, gd->new_gd, gd->relocaddr);
 #endif
@@ -791,7 +794,7 @@ static int initf_bootstage(void)
 
 static int initf_dm(void)
 {
-#if defined(CONFIG_DM) && CONFIG_VAL(SYS_MALLOC_F_LEN)
+#if defined(CONFIG_DM) && CONFIG_IS_ENABLED(SYS_MALLOC_F)
 	int ret;
 
 	bootstage_start(BOOTSTAGE_ID_ACCUM_DM_F, "dm_f");
@@ -826,11 +829,6 @@ __weak int clear_bss(void)
 	return 0;
 }
 
-static int misc_init_f(void)
-{
-	return event_notify_null(EVT_MISC_INIT_F);
-}
-
 static const init_fnc_t init_sequence_f[] = {
 	setup_mon_len,
 #ifdef CONFIG_OF_CONTROL
@@ -843,16 +841,12 @@ static const init_fnc_t init_sequence_f[] = {
 	log_init,
 	initf_bootstage,	/* uses its own timer, so does not need DM */
 	event_init,
-#ifdef CONFIG_BLOBLIST
-	bloblist_init,
-#endif
+	bloblist_maybe_init,
 	setup_spl_handoff,
 #if defined(CONFIG_CONSOLE_RECORD_INIT_F)
 	console_record_init,
 #endif
-#if defined(CONFIG_HAVE_FSP)
-	arch_fsp_init,
-#endif
+	INITCALL_EVENT(EVT_FSP_INIT_F),
 	arch_cpu_init,		/* basic arch cpu dependent setup */
 	mach_cpu_init,		/* SoC/machine dependent CPU setup */
 	initf_dm,
@@ -889,13 +883,10 @@ static const init_fnc_t init_sequence_f[] = {
 	show_board_info,
 #endif
 	INIT_FUNC_WATCHDOG_INIT
-	misc_init_f,
+	INITCALL_EVENT(EVT_MISC_INIT_F),
 	INIT_FUNC_WATCHDOG_RESET
 #if CONFIG_IS_ENABLED(SYS_I2C_LEGACY)
 	init_func_i2c,
-#endif
-#if defined(CONFIG_VID) && !defined(CONFIG_SPL)
-	init_func_vid,
 #endif
 	announce_dram_init,
 	dram_init,		/* configure available RAM banks */
@@ -969,8 +960,7 @@ static const init_fnc_t init_sequence_f[] = {
 	 * watchdog device is not serviced is as small as possible.
 	 */
 	cyclic_unregister_all,
-#if !defined(CONFIG_ARM) && !defined(CONFIG_SANDBOX) && \
-		!CONFIG_IS_ENABLED(X86_64)
+#if !defined(CONFIG_ARM) && !defined(CONFIG_SANDBOX)
 	jump_to_copy,
 #endif
 	NULL,

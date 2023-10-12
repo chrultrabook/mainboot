@@ -9,6 +9,7 @@
 #include <common.h>
 #include <bootdev.h>
 #include <bootflow.h>
+#include <bootm.h>
 #include <bootstd.h>
 #include <command.h>
 #include <console.h>
@@ -70,7 +71,7 @@ static void show_bootflow(int index, struct bootflow *bflow, bool errors)
 	printf("%3x  %-11s  %-6s  %-9.9s %4x  %-25.25s %s\n", index,
 	       bflow->method->name, bootflow_state_get_name(bflow->state),
 	       bflow->dev ? dev_get_uclass_name(dev_get_parent(bflow->dev)) :
-	       "(none)", bflow->part, bflow->name, bflow->fname);
+	       "(none)", bflow->part, bflow->name, bflow->fname ?: "");
 	if (errors)
 		report_bootflow_err(bflow, bflow->err);
 }
@@ -288,6 +289,12 @@ static int do_bootflow_select(struct cmd_tbl *cmdtp, int flag, int argc,
 		return CMD_RET_FAILURE;
 	}
 	std->cur_bootflow = found;
+	if (IS_ENABLED(CONFIG_BOOTSTD_FULL)) {
+		if (env_set("bootargs", found->cmdline)) {
+			printf("Cannot set bootargs\n");
+			return CMD_RET_FAILURE;
+		}
+	}
 
 	return 0;
 }
@@ -297,11 +304,14 @@ static int do_bootflow_info(struct cmd_tbl *cmdtp, int flag, int argc,
 {
 	struct bootstd_priv *std;
 	struct bootflow *bflow;
+	bool x86_setup = false;
 	bool dump = false;
 	int ret;
 
-	if (argc > 1 && *argv[1] == '-')
+	if (argc > 1 && *argv[1] == '-') {
 		dump = strchr(argv[1], 'd');
+		x86_setup = strchr(argv[1], 's');
+	}
 
 	ret = bootstd_get_priv(&std);
 	if (ret)
@@ -312,6 +322,12 @@ static int do_bootflow_info(struct cmd_tbl *cmdtp, int flag, int argc,
 		return CMD_RET_FAILURE;
 	}
 	bflow = std->cur_bootflow;
+
+	if (IS_ENABLED(CONFIG_X86) && x86_setup) {
+		zimage_dump(bflow->x86_setup, false);
+
+		return 0;
+	}
 
 	printf("Name:      %s\n", bflow->name);
 	printf("Device:    %s\n", bflow->dev->name);
@@ -324,6 +340,14 @@ static int do_bootflow_info(struct cmd_tbl *cmdtp, int flag, int argc,
 	printf("Buffer:    %lx\n", (ulong)map_to_sysmem(bflow->buf));
 	printf("Size:      %x (%d bytes)\n", bflow->size, bflow->size);
 	printf("OS:        %s\n", bflow->os_name ? bflow->os_name : "(none)");
+	printf("Cmdline:   ");
+	if (bflow->cmdline)
+		puts(bflow->cmdline);
+	else
+		puts("(none)");
+	putc('\n');
+	if (bflow->x86_setup)
+		printf("X86 setup: %p\n", bflow->x86_setup);
 	printf("Logo:      %s\n", bflow->logo ?
 	       simple_xtoa((ulong)map_to_sysmem(bflow->logo)) : "(none)");
 	if (bflow->logo) {
@@ -350,6 +374,35 @@ static int do_bootflow_info(struct cmd_tbl *cmdtp, int flag, int argc,
 				break;
 			}
 		}
+	}
+
+	return 0;
+}
+
+static int do_bootflow_read(struct cmd_tbl *cmdtp, int flag, int argc,
+			    char *const argv[])
+{
+	struct bootstd_priv *std;
+	struct bootflow *bflow;
+	int ret;
+
+	ret = bootstd_get_priv(&std);
+	if (ret)
+		return CMD_RET_FAILURE;
+
+	/*
+	 * Require a current bootflow. Users can use 'bootflow scan -b' to
+	 * automatically scan and boot, if needed.
+	 */
+	if (!std->cur_bootflow) {
+		printf("No bootflow selected\n");
+		return CMD_RET_FAILURE;
+	}
+	bflow = std->cur_bootflow;
+	ret = bootflow_read_all(bflow);
+	if (ret) {
+		printf("Failed: err=%dE\n", ret);
+		return CMD_RET_FAILURE;
 	}
 
 	return 0;
@@ -417,6 +470,75 @@ static int do_bootflow_menu(struct cmd_tbl *cmdtp, int flag, int argc,
 
 	return 0;
 }
+
+static int do_bootflow_cmdline(struct cmd_tbl *cmdtp, int flag, int argc,
+			       char *const argv[])
+{
+	struct bootstd_priv *std;
+	struct bootflow *bflow;
+	const char *op, *arg, *val = NULL;
+	int ret;
+
+	if (argc < 3)
+		return CMD_RET_USAGE;
+
+	ret = bootstd_get_priv(&std);
+	if (ret)
+		return CMD_RET_FAILURE;
+
+	bflow = std->cur_bootflow;
+	if (!bflow) {
+		printf("No bootflow selected\n");
+		return CMD_RET_FAILURE;
+	}
+
+	op = argv[1];
+	arg = argv[2];
+	if (*op == 's') {
+		if (argc < 4)
+			return CMD_RET_USAGE;
+		val = argv[3];
+	}
+
+	switch (*op) {
+	case 'c':	/* clear */
+		val = "";
+		fallthrough;
+	case 's':	/* set */
+	case 'd':	/* delete */
+		ret = bootflow_cmdline_set_arg(bflow, arg, val, true);
+		break;
+	case 'g':	/* get */
+		ret = bootflow_cmdline_get_arg(bflow, arg, &val);
+		if (ret >= 0)
+			printf("%.*s\n", ret, val);
+		break;
+	case 'a':	/* auto */
+		ret = bootflow_cmdline_auto(bflow, arg);
+		break;
+	}
+	switch (ret) {
+	case -E2BIG:
+		printf("Argument too long\n");
+		break;
+	case -ENOENT:
+		printf("Argument not found\n");
+		break;
+	case -EINVAL:
+		printf("Mismatched quotes\n");
+		break;
+	case -EBADF:
+		printf("Value must be quoted\n");
+		break;
+	default:
+		if (ret < 0)
+			printf("Unknown error: %dE\n", ret);
+	}
+	if (ret < 0)
+		return CMD_RET_FAILURE;
+
+	return 0;
+}
 #endif /* CONFIG_CMD_BOOTFLOW_FULL */
 
 #ifdef CONFIG_SYS_LONGHELP
@@ -425,9 +547,11 @@ static char bootflow_help_text[] =
 	"scan [-abeGl] [bdev]  - scan for valid bootflows (-l list, -a all, -e errors, -b boot, -G no global)\n"
 	"bootflow list [-e]             - list scanned bootflows (-e errors)\n"
 	"bootflow select [<num>|<name>] - select a bootflow\n"
-	"bootflow info [-d]             - show info on current bootflow (-d dump bootflow)\n"
-	"bootflow boot                  - boot current bootflow (or first available if none selected)\n"
-	"bootflow menu [-t]             - show a menu of available bootflows";
+	"bootflow info [-ds]            - show info on current bootflow (-d dump bootflow)\n"
+	"bootflow read                  - read all current-bootflow files\n"
+	"bootflow boot                  - boot current bootflow\n"
+	"bootflow menu [-t]             - show a menu of available bootflows\n"
+	"bootflow cmdline [set|get|clear|delete|auto] <param> [<value>] - update cmdline";
 #else
 	"scan - boot first available bootflow\n";
 #endif
@@ -439,7 +563,9 @@ U_BOOT_CMD_WITH_SUBCMDS(bootflow, "Boot flows", bootflow_help_text,
 	U_BOOT_SUBCMD_MKENT(list, 2, 1, do_bootflow_list),
 	U_BOOT_SUBCMD_MKENT(select, 2, 1, do_bootflow_select),
 	U_BOOT_SUBCMD_MKENT(info, 2, 1, do_bootflow_info),
+	U_BOOT_SUBCMD_MKENT(read, 1, 1, do_bootflow_read),
 	U_BOOT_SUBCMD_MKENT(boot, 1, 1, do_bootflow_boot),
 	U_BOOT_SUBCMD_MKENT(menu, 2, 1, do_bootflow_menu),
+	U_BOOT_SUBCMD_MKENT(cmdline, 4, 1, do_bootflow_cmdline),
 #endif
 );

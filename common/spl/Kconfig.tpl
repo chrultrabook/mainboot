@@ -43,6 +43,7 @@ config TPL_FRAMEWORK
 
 config TPL_BANNER_PRINT
 	bool "Enable output of the TPL banner 'U-Boot TPL ...'"
+	depends on DEBUG_UART && TPL_SERIAL
 	default y
 	help
 	  If this option is enabled, TPL will print the banner with version
@@ -125,7 +126,7 @@ config TPL_POWER
 
 config TPL_TEXT_BASE
 	hex "Base address for the .text section of the TPL stage"
-	default 0
+	default 0x0
 	help
 	  The base address for the .text section of the TPL stage.
 

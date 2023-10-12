@@ -12,7 +12,6 @@
 #include <dm/platform_data/serial_mxc.h>
 #include <dm/device-internal.h>
 #include <env.h>
-#include <env_internal.h>
 #include <hang.h>
 #include <init.h>
 #include <linux/delay.h>
@@ -28,6 +27,7 @@
 #include <asm/arch/mx6-pins.h>
 #include <asm/arch/sys_proto.h>
 #include <asm/mach-imx/iomux-v3.h>
+#include <asm/sections.h>
 #include <usb.h>
 #include <usb/ehci-ci.h>
 #include <fuse.h>
@@ -234,22 +234,6 @@ static void unset_early_gpio(void)
 	gpio_set_value(GPIO_USB_HUB_RESET, 1);
 	gpio_set_value(GPIO_EXP_RS485_RESET, 1);
 	gpio_set_value(GPIO_TOUCH_RESET, 1);
-}
-
-enum env_location env_get_location(enum env_operation op, int prio)
-{
-	if (op == ENVOP_SAVE || op == ENVOP_ERASE)
-		return ENVL_MMC;
-
-	switch (prio) {
-	case 0:
-		return ENVL_NOWHERE;
-
-	case 1:
-		return ENVL_MMC;
-	}
-
-	return ENVL_UNKNOWN;
 }
 
 int board_late_init(void)
@@ -559,7 +543,7 @@ int board_mmc_init(struct bd_info *bis)
 	gpio_direction_input(USDHC2_CD_GPIO);
 	/*
 	 * According to the board_mmc_init() the following map is done:
-	 * (U-boot device node) (Physical Port)
+	 * (U-Boot device node) (Physical Port)
 	 * mmc0 USDHC2
 	 * mmc1 USDHC4
 	 */

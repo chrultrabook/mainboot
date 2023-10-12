@@ -9,6 +9,7 @@
 #define _STARFIVE_VISIONFIVE2_H
 
 #define RISCV_MMODE_TIMERBASE		0x2000000
+#define RISCV_MMODE_TIMEROFF		0xbff8
 #define RISCV_MMODE_TIMER_FREQ		4000000
 #define RISCV_SMODE_TIMER_FREQ		4000000
 
@@ -17,6 +18,9 @@
 /* Environment options */
 
 #define BOOT_TARGET_DEVICES(func) \
+	func(NVME, nvme, 0) \
+	func(USB, usb, 0) \
+	func(MMC, mmc, 0) \
 	func(MMC, mmc, 1) \
 	func(DHCP, dhcp, na)
 

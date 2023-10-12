@@ -226,7 +226,7 @@ config CONSOLE_FLUSH_SUPPORT
 
 config CONSOLE_MUX
 	bool "Enable console multiplexing"
-	default y if VIDEO || VIDEO || LCD
+	default y if VIDEO || LCD
 	help
 	  This allows multiple devices to be used for each console 'file'.
 	  For example, stdout can be set to go to serial and video.
@@ -256,6 +256,7 @@ config SYS_CONSOLE_OVERWRITE_ROUTINE
 
 config SYS_CONSOLE_ENV_OVERWRITE
 	bool "Update environment variables during console init"
+	depends on SYS_CONSOLE_IS_IN_ENV
 	help
 	  The console environment variables (stdout, stdin, stderr) can be
 	  used to determine the correct console devices on start-up. This
@@ -619,7 +620,7 @@ config EVENT_DYNAMIC
 	bool
 	help
 	  Enable this to support adding an event spy at runtime, without adding
-	  it to the EVENT_SPY() linker list. This increases code size slightly
+	  it to the EVENT_SPY*() linker list. This increases code size slightly
 	  but provides more flexibility for boards and subsystems that need it.
 
 config EVENT_DEBUG
@@ -647,7 +648,7 @@ config SPL_EVENT_DYNAMIC
 	depends on SPL_EVENT && EVENT_DYNAMIC
 	help
 	  Enable this to support adding an event spy at runtime, without adding
-	  it to the EVENT_SPY() linker list. This increases code size slightly
+	  it to the EVENT_SPY*() linker list. This increases code size slightly
 	  but provides more flexibility for boards and subsystems that need it.
 
 endif # EVENT
@@ -719,6 +720,7 @@ config SYS_FSL_CLK
 
 config LAST_STAGE_INIT
 	bool "Call board-specific as last setup step"
+	select EVENT
 	help
 	  Some boards need to perform initialisation immediately before control
 	  is passed to the command-line interpreter (e.g. for initializations
@@ -935,12 +937,22 @@ config ANDROID_AB
 	  allows a bootloader to try a new version of the system but roll back
 	  to previous version if the new one didn't boot all the way.
 
+config ANDROID_AB_BACKUP_OFFSET
+	hex "Offset of backup bootloader control"
+	depends on ANDROID_AB
+	default 0x0
+	help
+	  If non-zero, a backup bootloader message starting at this offset in
+	  the partition will tried in the event that the primary one (starting
+	  at offset 0) fails its checksum.
+
 endmenu
 
 menu "Blob list"
 
 config BLOBLIST
 	bool "Support for a bloblist"
+	select CRC32
 	help
 	  This enables support for a bloblist in U-Boot, which can be passed
 	  from TPL to SPL to U-Boot proper (and potentially to Linux). The
@@ -951,6 +963,7 @@ config BLOBLIST
 config SPL_BLOBLIST
 	bool "Support for a bloblist in SPL"
 	depends on BLOBLIST && SPL_LIBGENERIC_SUPPORT && SPL_LIBCOMMON_SUPPORT
+	select SPL_CRC32
 	default y if SPL
 	help
 	  This enables a bloblist in SPL. If this is the first part of U-Boot
@@ -960,6 +973,7 @@ config SPL_BLOBLIST
 config TPL_BLOBLIST
 	bool "Support for a bloblist in TPL"
 	depends on BLOBLIST && TPL_LIBGENERIC_SUPPORT && TPL_LIBCOMMON_SUPPORT
+	select TPL_CRC32
 	default y if TPL
 	help
 	  This enables a bloblist in TPL. The bloblist is set up in TPL and
@@ -998,7 +1012,7 @@ endchoice
 
 config BLOBLIST_ADDR
 	hex "Address of bloblist"
-	default 0xc000 if SANDBOX
+	default 0xb000 if SANDBOX
 	depends on BLOBLIST_FIXED
 	help
 	  Sets the address of the bloblist, set up by the first part of U-Boot
@@ -1018,7 +1032,7 @@ config BLOBLIST_SIZE
 config BLOBLIST_SIZE_RELOC
 	hex "Size of bloblist after relocation"
 	default BLOBLIST_SIZE if BLOBLIST_FIXED || BLOBLIST_ALLOC
-	default 0 if BLOBLIST_PASSAGE
+	default 0x0 if BLOBLIST_PASSAGE
 	help
 	  Sets the size of the bloblist in bytes after relocation. Since U-Boot
 	  has a lot more memory available then, it is possible to use a larger
@@ -1143,26 +1157,5 @@ config VPL_IMAGE_SIGN_INFO
 
 endif
 
-config FDT_SIMPLEFB
-	bool "FDT tools for simplefb support"
-	depends on OF_LIBFDT
-	help
-	  Enable the fdt tools to manage the simple fb nodes in device tree.
-	  These functions can be used by board to indicate to the OS
-	  the presence of the simple frame buffer with associated reserved
-	  memory
-
 config IO_TRACE
 	bool
-
-config BMP
-	bool "Enable bmp image display"
-	default y if CMD_BMP
-	help
-	  Enable bmp functions to display bmp image and get bmp info.
-
-config SPL_BMP
-	bool "Enable bmp image display at  SPL"
-	depends on SPL_VIDEO
-	help
-	  Enable bmp functions to display bmp image and get bmp info at SPL.

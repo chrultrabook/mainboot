@@ -92,8 +92,8 @@ struct arch_global_data {
 	struct udevice *scu_dev;
 #endif
 
-#ifdef CONFIG_IMX_SENTINEL
-	struct udevice *s400_dev;
+#ifdef CONFIG_IMX_ELE
+	struct udevice *ele_dev;
 	u32 soc_rev;
 	u32 lifecycle;
 	u32 uid[4];
@@ -101,6 +101,9 @@ struct arch_global_data {
 
 #ifdef CONFIG_ARCH_IMX8ULP
 	bool m33_handshake_done;
+#endif
+#ifdef CONFIG_SMBIOS
+	ulong smbios_start;		/* Start address of SMBIOS table */
 #endif
 };
 

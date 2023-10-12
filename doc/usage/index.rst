@@ -4,6 +4,7 @@ Use U-Boot
 .. toctree::
    :maxdepth: 1
 
+   spl_boot
    blkmap
    dfu
    environment
@@ -22,6 +23,7 @@ Shell commands
 
    cmd/acpi
    cmd/addrmap
+   cmd/armffa
    cmd/askenv
    cmd/base
    cmd/bdinfo
@@ -39,6 +41,7 @@ Shell commands
    cmd/bootz
    cmd/cat
    cmd/cbsysinfo
+   cmd/cedit
    cmd/cls
    cmd/cmp
    cmd/coninfo
@@ -63,17 +66,21 @@ Shell commands
    cmd/for
    cmd/fwu_mdata
    cmd/gpio
+   cmd/gpt
+   cmd/history
    cmd/host
    cmd/imxtract
    cmd/load
    cmd/loadb
    cmd/loadm
+   cmd/loads
    cmd/loadx
    cmd/loady
    cmd/mbr
    cmd/md
    cmd/mmc
    cmd/mtest
+   cmd/mtrr
    cmd/panic
    cmd/part
    cmd/pause
@@ -84,6 +91,7 @@ Shell commands
    cmd/read
    cmd/reset
    cmd/rng
+   cmd/saves
    cmd/sbi
    cmd/sf
    cmd/scp03
